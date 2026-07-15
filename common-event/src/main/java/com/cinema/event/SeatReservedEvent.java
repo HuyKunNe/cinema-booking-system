@@ -1,7 +1,12 @@
 package com.cinema.event;
 
-import java.time.LocalDateTime;
+import lombok.Builder;
 
+import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Builder
 public record SeatReservedEvent(
 
         Long bookingId,
@@ -10,9 +15,10 @@ public record SeatReservedEvent(
 
         Long showtimeId,
 
-        String seatNumber,
+        List<String> seatNumbers,
 
-        LocalDateTime reservedAt
+        LocalDateTime createdAt
 
-) {
+) implements Serializable {
+
 }

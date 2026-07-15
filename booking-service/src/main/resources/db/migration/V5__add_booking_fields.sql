@@ -1,0 +1,5 @@
+ALTER TABLE bookings
+ADD COLUMN total_amount DECIMAL(10,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE bookings
+ADD COLUMN expired_at DATETIME NULL;
