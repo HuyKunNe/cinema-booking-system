@@ -1,0 +1,3 @@
+com\cinema\event\PaymentSuccessEvent.class
+com\cinema\event\SeatReservedEvent.class
+com\cinema\event\BookingCancelledEvent.class

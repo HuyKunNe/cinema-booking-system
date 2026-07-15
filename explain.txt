@@ -1,0 +1,10 @@
+Redis Lock sẽ dùng gì?
+    Redis có lệnh:
+        SET key value NX EX 300
+    Ý nghĩa:
+        SET lock:show:10:H7 user-100 NX EX 300
+    Giải thích:
+        lock:show:10:H7 -> key.
+        user-100 -> ai đang giữ lock.
+        NX -> chỉ set nếu chưa tồn tại.
+        EX 300 -> tự hết hạn sau 300 giây (5 phút).
