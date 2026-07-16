@@ -1,0 +1,22 @@
+CREATE TABLE outbox_events (
+
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+
+    aggregate_type VARCHAR(100) NOT NULL,
+
+    aggregate_id BIGINT NOT NULL,
+
+    event_type VARCHAR(100) NOT NULL,
+
+    payload LONGTEXT NOT NULL,
+
+    status VARCHAR(20) NOT NULL,
+
+    processed_at DATETIME NULL,
+
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP
+
+);

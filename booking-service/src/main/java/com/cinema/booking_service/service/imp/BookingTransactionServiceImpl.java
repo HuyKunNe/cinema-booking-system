@@ -11,7 +11,9 @@ import com.cinema.booking_service.dto.response.ReserveSeatResponse;
 import com.cinema.booking_service.entity.Booking;
 import com.cinema.booking_service.entity.BookingSeat;
 import com.cinema.booking_service.entity.ShowSeat;
+import com.cinema.booking_service.enums.AggregateType;
 import com.cinema.booking_service.enums.BookingStatus;
+import com.cinema.booking_service.enums.OutboxEventType;
 import com.cinema.booking_service.enums.SeatStatus;
 import com.cinema.booking_service.exception.SeatAlreadyBookedException;
 import com.cinema.booking_service.exception.SeatNotFoundException;
@@ -19,20 +21,25 @@ import com.cinema.booking_service.repository.BookingRepository;
 import com.cinema.booking_service.repository.BookingSeatRepository;
 import com.cinema.booking_service.repository.ShowSeatRepository;
 import com.cinema.booking_service.service.BookingTransactionService;
+import com.cinema.booking_service.service.outbox.OutboxService;
+import com.cinema.event.SeatReservedEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class BookingTransactionServiceImpl
-                implements BookingTransactionService {
+public class BookingTransactionServiceImpl implements BookingTransactionService {
 
         private final ShowSeatRepository showSeatRepository;
 
         private final BookingRepository bookingRepository;
 
         private final BookingSeatRepository bookingSeatRepository;
+        private final ObjectMapper objectMapper;
+        private final OutboxService outboxService;
 
         @Value("${booking.hold-duration-minutes}")
         private long holdDurationMinutes;
@@ -86,12 +93,34 @@ public class BookingTransactionServiceImpl
                 showSeatRepository.saveAll(seats);
                 bookingSeatRepository.saveAll(bookingSeats);
 
+                SeatReservedEvent event = SeatReservedEvent.builder()
+                                .bookingId(booking.getId())
+                                .userId(request.getUserId())
+                                .showtimeId(request.getShowtimeId())
+                                .seatNumbers(request.getSeatNumbers())
+                                .createdAt(LocalDateTime.now())
+                                .build();
+
+                outboxService.save(
+                                AggregateType.BOOKING,
+                                booking.getId(),
+                                OutboxEventType.SEAT_RESERVED,
+                                event);
+
                 return ReserveSeatResponse.builder()
                                 .bookingId(booking.getId())
                                 .status(booking.getStatus())
                                 .message("Reserved")
                                 .build();
 
+        }
+
+        public String toJson(Object object) {
+                try {
+                        return objectMapper.writeValueAsString(object);
+                } catch (JsonProcessingException e) {
+                        throw new IllegalStateException("Cannot convert object to JSON", e);
+                }
         }
 
 }
