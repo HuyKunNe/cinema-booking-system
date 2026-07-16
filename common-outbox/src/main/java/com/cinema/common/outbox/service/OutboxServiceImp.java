@@ -1,5 +1,5 @@
-package common-outbox.service;
+package com.cinema.common.outbox.service;
 
-public class OutboxServiceImp implements OutboxService {
+public class OutboxServiceImp {
 
 }
