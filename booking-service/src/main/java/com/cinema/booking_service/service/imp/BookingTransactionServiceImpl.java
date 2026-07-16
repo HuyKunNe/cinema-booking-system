@@ -46,9 +46,9 @@ public class BookingTransactionServiceImpl implements BookingTransactionService 
 
         @Override
         @Transactional
-        public ReserveSeatResponse reserve(
-                        ReserveSeatRequest request) {
+        public ReserveSeatResponse reserve(ReserveSeatRequest request) {
 
+                // lock for update seats to prevent concurrent booking
                 List<ShowSeat> seats = showSeatRepository.lockSeats(
                                 request.getShowtimeId(),
                                 request.getSeatNumbers());
@@ -58,7 +58,7 @@ public class BookingTransactionServiceImpl implements BookingTransactionService 
                         throw new SeatNotFoundException(
                                         "Seat not found");
                 }
-
+                // check if any seat is already booked
                 for (ShowSeat seat : seats) {
 
                         if (seat.getStatus() != SeatStatus.AVAILABLE) {
@@ -70,6 +70,7 @@ public class BookingTransactionServiceImpl implements BookingTransactionService 
                         }
 
                 }
+                // create booking and booking seats
                 LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(holdDurationMinutes);
                 Booking booking = Booking.builder()
                                 .userId(request.getUserId())
@@ -80,6 +81,7 @@ public class BookingTransactionServiceImpl implements BookingTransactionService 
 
                 bookingRepository.save(booking);
 
+                // update seat status to reserved and save booking seats
                 List<BookingSeat> bookingSeats = seats.stream()
                                 .map(seat -> {
                                         seat.setStatus(SeatStatus.RESERVED);
@@ -93,6 +95,7 @@ public class BookingTransactionServiceImpl implements BookingTransactionService 
                 showSeatRepository.saveAll(seats);
                 bookingSeatRepository.saveAll(bookingSeats);
 
+                // create outbox event for seat reserved
                 SeatReservedEvent event = SeatReservedEvent.builder()
                                 .bookingId(booking.getId())
                                 .userId(request.getUserId())

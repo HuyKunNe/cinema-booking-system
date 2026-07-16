@@ -1,0 +1,411 @@
+Bài toán
+
+Chỉ còn 1 ghế H8.
+
+Có 1000 request cùng lúc.
+
+INTERNET
+
+    User1
+    User2
+    User3
+    ...
+    User1000
+
+Toàn bộ request sẽ đi vào:
+
+Booking Service
+Nếu KHÔNG có Redis Lock
+
+1000 request sẽ cùng vào service.
+
+Request1
+
+↓
+
+Database
+
+↓
+
+SELECT
+
+↓
+
+UPDATE
+
+Request2
+
+↓
+
+Database
+
+↓
+
+SELECT
+
+↓
+
+UPDATE
+
+...
+
+Request1000
+
+↓
+
+Database
+
+Database phải xử lý 1000 transaction.
+
+Database sẽ bị gì?
+
+Giả sử mỗi transaction:
+
+SELECT FOR UPDATE
+
+Thì:
+
+Request1
+
+LOCK
+
+999 request còn lại:
+
+WAIT
+
+WAIT
+
+WAIT
+
+WAIT
+
+MySQL sẽ phải:
+
+tạo 1000 transaction
+giữ 999 connection chờ
+tiêu tốn CPU và RAM
+
+=> Database rất dễ trở thành nút thắt (bottleneck).
+
+Thêm Redis Lock
+
+Flow đổi thành:
+
+1000 Request
+
+↓
+
+Redis
+
+Redis xử lý:
+
+Request1
+
+SETNX seat:H8
+
+SUCCESS
+
+Request2
+
+SETNX seat:H8
+
+FAIL
+
+...
+
+Request1000
+
+FAIL
+
+Kết quả:
+
+999 request
+
+↓
+
+Return ngay
+
+Chỉ còn:
+
+1 request
+
+↓
+
+Database
+
+Đây chính là giá trị lớn nhất của Redis Lock: giảm tải cho database.
+
+Tại sao vẫn cần Database Lock?
+
+Giả sử xảy ra tình huống:
+
+A lock Redis
+
+↓
+
+Server pause
+
+↓
+
+Redis lease hết hạn
+
+↓
+
+Redis unlock
+
+Lúc này:
+
+B lấy được Redis Lock
+
+Trong khi:
+
+A
+
+vẫn chưa commit
+
+Nếu chỉ dựa vào Redis:
+
+A
+
+UPDATE
+
+và
+
+B
+
+UPDATE
+
+có thể cùng chạy.
+
+Database Lock sẽ ngăn:
+
+A
+
+FOR UPDATE
+
+↓
+
+LOCK ROW
+
+B:
+
+FOR UPDATE
+
+↓
+
+WAIT
+Optimistic Lock để làm gì?
+
+Bạn đã có:
+
+@Version
+private Integer version;
+
+Giả sử:
+
+A đọc:
+
+version = 5
+
+B cũng đọc:
+
+version = 5
+
+A update:
+
+version
+
+5
+
+↓
+
+6
+
+B update:
+
+Hibernate sẽ sinh SQL tương tự:
+
+UPDATE show_seats
+SET version = 6
+WHERE id = 10
+  AND version = 5;
+
+Nhưng DB hiện đã là:
+
+version = 6
+
+Kết quả:
+
+0 row updated
+
+Hibernate ném:
+
+OptimisticLockException
+
+=> B rollback.
+
+Đây là lớp phát hiện xung đột dữ liệu.
+
+Unique Constraint
+
+Giả sử có bug trong code.
+
+Hai request đều cố insert:
+
+booking_seats
+
+showtime=1
+
+seat=H8
+
+Database có:
+
+UNIQUE(showtime_id, seat_number)
+
+Request đầu:
+
+INSERT
+
+OK
+
+Request sau:
+
+Duplicate key
+
+DB sẽ từ chối.
+
+Đây là lớp bảo vệ cuối cùng.
+
+Transaction
+
+Giả sử đã:
+
+Insert Booking
+
+Nhưng:
+
+Insert BookingSeat
+
+↓
+
+Exception
+
+Nếu không có transaction:
+
+Booking
+
+Đã tồn tại
+
+nhưng:
+
+BookingSeat
+
+Không có
+
+Dữ liệu bị "mồ côi".
+
+Có @Transactional:
+
+Booking
+
+Rollback
+
+Mọi thay đổi đều được hoàn tác.
+
+Outbox Pattern
+
+Giả sử:
+
+Save Booking
+
+OK
+
+Sau đó:
+
+Kafka.send()
+
+↓
+
+Broker chết
+
+Nếu gửi Kafka trực tiếp trong transaction:
+
+Booking
+
+Đã lưu
+
+nhưng:
+
+Payment Service
+
+Không bao giờ biết
+
+Outbox giải quyết bằng cách:
+
+Transaction
+
+↓
+
+Booking
+
+↓
+
+Outbox NEW
+
+↓
+
+Commit
+
+Sau commit:
+
+Scheduler
+
+↓
+
+Kafka
+
+↓
+
+SENT
+
+Không mất event.
+
+Toàn bộ luồng của project
+                 Client
+                    |
+                    v
+          Redisson Distributed Lock
+                    |
+                    v
+           Database Transaction
+                    |
+          +---------+---------+
+          |                   |
+          v                   v
+     Booking             BookingSeat
+                    |
+                    v
+          Pessimistic Lock
+                    |
+                    v
+          Optimistic Lock
+                    |
+                    v
+         Unique Constraint
+                    |
+                    v
+          Outbox Event (NEW)
+                    |
+                Commit DB
+                    |
+                    v
+         Outbox Scheduler
+                    |
+                    v
+             Kafka Producer
+                    |
+                    v
+         Kafka Topic seat-reserved
+                    |
+                    v
+       Outbox Event (SENT)

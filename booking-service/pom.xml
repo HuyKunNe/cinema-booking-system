@@ -79,6 +79,12 @@
             <artifactId>common-event</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- Common Kafka -->
+        <dependency>
+            <groupId>com.cinema</groupId>
+            <artifactId>common-kafka</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Lombok -->
         <dependency>

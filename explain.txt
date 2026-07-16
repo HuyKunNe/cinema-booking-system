@@ -8,3 +8,22 @@ Redis Lock sẽ dùng gì?
         user-100 -> ai đang giữ lock.
         NX -> chỉ set nếu chưa tồn tại.
         EX 300 -> tự hết hạn sau 300 giây (5 phút).
+
+The Transactional Outbox Pattern solves the "dual-write" problem in distributed systems
+    Outbox Pattern:
+
+        DB Commit
+
+        ↓
+
+        Kafka Send
+
+        Nếu Kafka lỗi ngay sau commit thì có thể mất event.
+
+        Outbox Pattern sẽ giải quyết vấn đề này.
+
+Redisson Distributed Lock: giảm cạnh tranh ngay từ đầu giữa nhiều instance ứng dụng. (SET key value NX EX 300)
+Transaction: đảm bảo tất cả thao tác trong một lần đặt vé hoặc cùng thành công, hoặc cùng rollback.
+Pessimistic Lock: khóa bản ghi khi cần cập nhật để tránh ghi đồng thời.
+Optimistic Lock (@Version): phát hiện nếu dữ liệu đã bị thay đổi bởi transaction khác.
+Unique Constraint: lớp bảo vệ cuối cùng ở database, đảm bảo không thể tồn tại hai bản ghi vi phạm quy tắc duy nhất.

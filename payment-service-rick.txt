@@ -1,0 +1,23 @@
+Nếu không chống duplicate
+Lần 1
+
+Create Payment
+
+id=1
+bookingId=5
+
+Crash.
+
+Kafka gửi lại
+
+Lần 2
+
+Create Payment
+
+id=2
+bookingId=5
+
+Một booking có 2 payment.
+
+Sai.
+

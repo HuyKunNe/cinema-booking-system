@@ -1,4 +1,4 @@
-package com.cinema.booking_service.config;
+package com.cinema.common.kafka.config;
 
 import java.util.HashMap;
 import java.util.Map;

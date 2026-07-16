@@ -2,6 +2,7 @@ package com.cinema.booking_service.service;
 
 import com.cinema.booking_service.dto.request.ReserveSeatRequest;
 import com.cinema.booking_service.dto.response.ReserveSeatResponse;
+import com.cinema.event.PaymentSuccessEvent;
 
 public interface BookingService {
 
@@ -9,6 +10,6 @@ public interface BookingService {
 
     void cancelBooking(Long bookingId);
 
-    void confirmBooking(Long bookingId);
+    void confirmBooking(PaymentSuccessEvent event);
 
 }

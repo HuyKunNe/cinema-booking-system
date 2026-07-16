@@ -1,3 +1,4 @@
+event-driven microservices
 run docker: docker compose up
 Công nghệ sử dụng:
    Java 21
@@ -13,22 +14,62 @@ Công nghệ sử dụng:
    Maven Multi Module
 
 Booking flow
-   HTTP
-   ↓
-   Controller
-   ↓
-   Redis Lock
-   ↓
+   Client
+   |
+   v
+   Booking API
+   |
+   v
    Transaction
-   ↓
-   SELECT FOR UPDATE
-   ↓
-   Kiểm tra ghế
-   ↓
-   Booking
-   ↓
-   BookingSeat
-   ↓
-   Update ShowSeat
-   ↓
-   Commit
+   |
+   +--> bookings
+   |
+   +--> booking_seats
+   |
+   +--> show_seats (lock + update)
+   |
+   +--> outbox_events (NEW)
+            |
+            v
+   Outbox Scheduler
+            |
+            v
+   Kafka Producer
+            |
+            v
+   topic: seat-reserved
+            |
+            v
+   outbox_events (SENT)
+
+sau khi thêm payment-service (Đây chính là Saga Pattern (Choreography))
+   Booking API
+         |
+         |
+         v
+booking-service
+         |
+Transaction + Outbox
+         |
+         v
+seat-reserved
+   Kafka Topic
+         |
+         |
+         v
+payment-service
+         |
+PaymentConsumer
+         |
+payments table
+         |
+Payment Outbox
+         |
+         v
+payment-success
+   Kafka Topic
+         |
+         v
+booking-service
+         |
+Booking CONFIRMED
