@@ -10,8 +10,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class SeatReservedEventHandler
-        implements OutboxEventHandler {
+public class SeatReservedEventHandler implements OutboxEventHandler {
 
     private final ObjectMapper objectMapper;
 
@@ -19,19 +18,17 @@ public class SeatReservedEventHandler
 
     @Override
     public OutboxEventType getType() {
+
         return OutboxEventType.SEAT_RESERVED;
+
     }
 
     @Override
     public void handle(OutboxEvent event) throws Exception {
 
-        SeatReservedEvent seatReservedEvent =
-                objectMapper.readValue(
-                        event.getPayload(),
-                        SeatReservedEvent.class
-                );
+        SeatReservedEvent payload = objectMapper.readValue(event.getPayload(), SeatReservedEvent.class);
 
-        producer.send(seatReservedEvent);
+        producer.send(payload);
 
     }
 
