@@ -1,0 +1,4 @@
+com\cinema\common\kafka\autoconfigure\KafkaConsumerAutoConfiguration.class
+com\cinema\common\kafka\autoconfigure\KafkaProducerAutoConfiguration.class
+com\cinema\common\kafka\autoconfigure\CommonKafkaAutoConfiguration.class
+com\cinema\common\kafka\autoconfigure\JacksonAutoConfiguration.class

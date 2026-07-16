@@ -11,9 +11,7 @@ import com.cinema.booking_service.dto.response.ReserveSeatResponse;
 import com.cinema.booking_service.entity.Booking;
 import com.cinema.booking_service.entity.BookingSeat;
 import com.cinema.booking_service.entity.ShowSeat;
-import com.cinema.booking_service.enums.AggregateType;
 import com.cinema.booking_service.enums.BookingStatus;
-import com.cinema.booking_service.enums.OutboxEventType;
 import com.cinema.booking_service.enums.SeatStatus;
 import com.cinema.booking_service.exception.SeatAlreadyBookedException;
 import com.cinema.booking_service.exception.SeatNotFoundException;
@@ -21,7 +19,9 @@ import com.cinema.booking_service.repository.BookingRepository;
 import com.cinema.booking_service.repository.BookingSeatRepository;
 import com.cinema.booking_service.repository.ShowSeatRepository;
 import com.cinema.booking_service.service.BookingTransactionService;
-import com.cinema.booking_service.service.outbox.OutboxService;
+import com.cinema.common.outbox.enums.AggregateType;
+import com.cinema.common.outbox.enums.OutboxEventType;
+import com.cinema.common.outbox.publisher.EventPublisher;
 import com.cinema.event.SeatReservedEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,7 +39,7 @@ public class BookingTransactionServiceImpl implements BookingTransactionService 
 
         private final BookingSeatRepository bookingSeatRepository;
         private final ObjectMapper objectMapper;
-        private final OutboxService outboxService;
+        private final EventPublisher eventPublisher;
 
         @Value("${booking.hold-duration-minutes}")
         private long holdDurationMinutes;
@@ -104,7 +104,7 @@ public class BookingTransactionServiceImpl implements BookingTransactionService 
                                 .createdAt(LocalDateTime.now())
                                 .build();
 
-                outboxService.save(
+                eventPublisher.publish(
                                 AggregateType.BOOKING,
                                 booking.getId(),
                                 OutboxEventType.SEAT_RESERVED,

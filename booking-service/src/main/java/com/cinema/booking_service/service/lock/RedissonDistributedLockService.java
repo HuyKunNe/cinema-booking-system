@@ -1,13 +1,13 @@
 package com.cinema.booking_service.service.lock;
 
-import com.cinema.booking_service.exception.BookingException;
-import lombok.RequiredArgsConstructor;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -17,44 +17,29 @@ public class RedissonDistributedLockService
     private final RedissonClient redissonClient;
 
     @Override
-    public <T> T executeWithLock(
-            String key,
-            Supplier<T> action) {
+    public <T> T executeWithLock(String key, Supplier<T> action) {
 
         RLock lock = redissonClient.getLock(key);
 
-        boolean locked = false;
-
         try {
 
-            locked = lock.tryLock(
-                    5,
-                    30,
-                    TimeUnit.SECONDS);
+            boolean locked = lock.tryLock(5, 10, TimeUnit.SECONDS);
 
             if (!locked) {
-
-                throw new BookingException(
-                        "System busy. Please try again");
+                throw new RuntimeException("Cannot acquire lock");
             }
 
             return action.get();
 
         } catch (InterruptedException e) {
 
-            Thread.currentThread()
-                    .interrupt();
-
-            throw new BookingException(
-                    "Cannot acquire lock");
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
 
         } finally {
 
-            if (locked &&
-                    lock.isHeldByCurrentThread()) {
-
+            if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
-
             }
         }
     }

@@ -3,62 +3,54 @@ package com.cinema.payment_service.service.imp;
 import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.cinema.common.outbox.enums.AggregateType;
+import com.cinema.common.outbox.enums.OutboxEventType;
+import com.cinema.common.outbox.service.OutboxService;
 import com.cinema.event.PaymentSuccessEvent;
 import com.cinema.event.SeatReservedEvent;
 import com.cinema.payment_service.entity.Payment;
-import com.cinema.payment_service.enums.AggregateType;
-import com.cinema.payment_service.enums.OutboxEventType;
 import com.cinema.payment_service.enums.PaymentStatus;
 import com.cinema.payment_service.repository.PaymentRepository;
 import com.cinema.payment_service.service.PaymentService;
-import com.cinema.payment_service.service.outbox.OutboxService;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
-@Transactional
-public class PaymentServiceImpl implements PaymentService {
+public class PaymentServiceImpl
+                implements PaymentService {
 
-    private final PaymentRepository paymentRepository;
-    private final OutboxService outboxService;
+        private final PaymentRepository paymentRepository;
 
-    @Override
-    public void processPayment(SeatReservedEvent event) {
+        private final OutboxService outboxService;
 
-        if (paymentRepository.existsByBookingId(event.bookingId())) {
+        @Override
+        @Transactional
+        public void process(
+                        SeatReservedEvent event) {
 
-            log.info("Payment already exists for booking {}",
-                    event.bookingId());
+                Payment payment = Payment.builder()
+                                .bookingId(event.bookingId())
+                                .userId(event.userId())
+                                .status(PaymentStatus.SUCCESS)
+                                .build();
 
-            return;
+                paymentRepository.save(payment);
+
+                PaymentSuccessEvent paymentEvent = new PaymentSuccessEvent(
+                                payment.getId(),
+                                payment.getBookingId(),
+                                payment.getUserId(),
+                                LocalDateTime.now());
+
+                outboxService.save(
+                                AggregateType.PAYMENT,
+                                payment.getId(),
+                                OutboxEventType.PAYMENT_SUCCESS,
+                                paymentEvent);
+
         }
-
-        Payment payment = Payment.builder()
-                .bookingId(event.bookingId())
-                .userId(event.userId())
-                .status(PaymentStatus.SUCCESS)
-                .build();
-
-        payment = paymentRepository.save(payment);
-
-        PaymentSuccessEvent paymentSuccessEvent = new PaymentSuccessEvent(
-                payment.getBookingId(),
-                payment.getId(),
-                LocalDateTime.now());
-
-        outboxService.save(
-                AggregateType.PAYMENT,
-                payment.getId(),
-                OutboxEventType.PAYMENT_SUCCESS,
-                paymentSuccessEvent);
-
-        log.info("Payment created id={}", payment.getId());
-
-    }
 
 }

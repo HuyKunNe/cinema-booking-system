@@ -4,11 +4,10 @@ import java.time.LocalDateTime;
 
 public record PaymentSuccessEvent(
 
-        Long bookingId,
-
         Long paymentId,
 
-        LocalDateTime paidAt
+        Long bookingId,
 
-) {
+        Long userId,
+        LocalDateTime paidAt) {
 }
