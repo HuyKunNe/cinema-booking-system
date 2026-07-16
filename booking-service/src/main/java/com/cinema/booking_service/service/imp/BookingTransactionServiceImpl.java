@@ -1,7 +1,9 @@
 package com.cinema.booking_service.service.imp;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.cinema.booking_service.dto.request.ReserveSeatRequest;
@@ -32,6 +34,9 @@ public class BookingTransactionServiceImpl
 
         private final BookingSeatRepository bookingSeatRepository;
 
+        @Value("${booking.hold-duration-minutes}")
+        private long holdDurationMinutes;
+
         @Override
         @Transactional
         public ReserveSeatResponse reserve(
@@ -58,10 +63,11 @@ public class BookingTransactionServiceImpl
                         }
 
                 }
-
+                LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(holdDurationMinutes);
                 Booking booking = Booking.builder()
                                 .userId(request.getUserId())
                                 .showtimeId(request.getShowtimeId())
+                                .expiredAt(expiredAt)
                                 .status(BookingStatus.RESERVED)
                                 .build();
 
@@ -69,25 +75,16 @@ public class BookingTransactionServiceImpl
 
                 List<BookingSeat> bookingSeats = seats.stream()
                                 .map(seat -> {
-
-                                        seat.setStatus(
-                                                        SeatStatus.RESERVED);
-
-                                        seat.setReservedBy(
-                                                        request.getUserId());
-
+                                        seat.setStatus(SeatStatus.RESERVED);
+                                        seat.setReservedBy(request.getUserId());
+                                        seat.setReservedUntil(expiredAt);
                                         return BookingSeat.builder()
-                                                        .bookingId(
-                                                                        booking.getId())
-                                                        .showSeatId(
-                                                                        seat.getId())
+                                                        .bookingId(booking.getId())
+                                                        .showSeatId(seat.getId())
                                                         .build();
-
-                                })
-                                .toList();
-
-                bookingSeatRepository.saveAll(
-                                bookingSeats);
+                                }).toList();
+                showSeatRepository.saveAll(seats);
+                bookingSeatRepository.saveAll(bookingSeats);
 
                 return ReserveSeatResponse.builder()
                                 .bookingId(booking.getId())

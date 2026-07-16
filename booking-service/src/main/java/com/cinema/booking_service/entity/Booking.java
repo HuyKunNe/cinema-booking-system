@@ -1,5 +1,7 @@
 package com.cinema.booking_service.entity;
 
+import java.time.LocalDateTime;
+
 import com.cinema.booking_service.enums.BookingStatus;
 
 import jakarta.persistence.Entity;
@@ -31,7 +33,7 @@ public class Booking extends BaseEntity {
     private Long userId;
 
     private Long showtimeId;
-
+    private LocalDateTime expiredAt;
     @Enumerated(EnumType.STRING)
     private BookingStatus status;
 
