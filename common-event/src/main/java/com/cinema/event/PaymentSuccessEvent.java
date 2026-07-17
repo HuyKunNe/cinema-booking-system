@@ -1,11 +1,16 @@
 package com.cinema.event;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import lombok.Builder;
 
 @Builder
 public record PaymentSuccessEvent(
+
+        UUID eventId,
+
+        LocalDateTime occurredAt,
 
         Long paymentId,
 
@@ -15,7 +20,5 @@ public record PaymentSuccessEvent(
 
         String transactionId,
 
-        LocalDateTime paidAt
-
-) {
+        LocalDateTime paidAt) {
 }

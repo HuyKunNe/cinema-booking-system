@@ -1,19 +1,26 @@
 package com.cinema.event;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import lombok.Builder;
 
 @Builder
 public record PaymentFailedEvent(
 
-        Long paymentId,
+    UUID eventId,
 
-        Long bookingId,
+    LocalDateTime occurredAt,
 
-        Long userId,
+    Long paymentId,
 
-        String reason,
+    Long bookingId,
 
-        LocalDateTime failedAt) {
+    Long userId,
+
+    String reason,
+
+    LocalDateTime failedAt
+
+) {
 }

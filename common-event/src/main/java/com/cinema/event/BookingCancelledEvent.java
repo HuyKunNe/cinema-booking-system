@@ -1,14 +1,24 @@
 package com.cinema.event;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+import lombok.Builder;
+
+@Builder
 public record BookingCancelledEvent(
 
-    Long bookingId,
+        UUID eventId,
 
-    String reason,
+        LocalDateTime occurredAt,
 
-    LocalDateTime cancelledAt
+        Long bookingId,
+
+        Long userId,
+
+        Long showtimeId,
+
+        String reason
 
 ) {
 }

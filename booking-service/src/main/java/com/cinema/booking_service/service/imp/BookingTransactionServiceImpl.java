@@ -2,6 +2,7 @@ package com.cinema.booking_service.service.imp;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import com.cinema.booking_service.service.BookingTransactionService;
 import com.cinema.common.outbox.enums.AggregateType;
 import com.cinema.common.outbox.enums.OutboxEventType;
 import com.cinema.common.outbox.publisher.EventPublisher;
+import com.cinema.event.EventMetadataFactory;
 import com.cinema.event.SeatReservedEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,97 +35,98 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class BookingTransactionServiceImpl implements BookingTransactionService {
 
-        private final ShowSeatRepository showSeatRepository;
+    private final ShowSeatRepository showSeatRepository;
 
-        private final BookingRepository bookingRepository;
+    private final BookingRepository bookingRepository;
 
-        private final BookingSeatRepository bookingSeatRepository;
-        private final ObjectMapper objectMapper;
-        private final EventPublisher eventPublisher;
+    private final BookingSeatRepository bookingSeatRepository;
+    private final ObjectMapper objectMapper;
+    private final EventPublisher eventPublisher;
 
-        @Value("${booking.hold-duration-minutes}")
-        private long holdDurationMinutes;
+    @Value("${booking.hold-duration-minutes}")
+    private long holdDurationMinutes;
 
-        @Override
-        @Transactional
-        public ReserveSeatResponse reserve(ReserveSeatRequest request) {
+    @Override
+    @Transactional
+    public ReserveSeatResponse reserve(ReserveSeatRequest request) {
 
-                // lock for update seats to prevent concurrent booking
-                List<ShowSeat> seats = showSeatRepository.lockSeats(
-                                request.getShowtimeId(),
-                                request.getSeatNumbers());
+        // lock for update seats to prevent concurrent booking
+        List<ShowSeat> seats = showSeatRepository.lockSeats(
+                request.getShowtimeId(),
+                request.getSeatNumbers());
 
-                if (seats.size() != request.getSeatNumbers().size()) {
+        if (seats.size() != request.getSeatNumbers().size()) {
 
-                        throw new SeatNotFoundException(
-                                        "Seat not found");
-                }
-                // check if any seat is already booked
-                for (ShowSeat seat : seats) {
+            throw new SeatNotFoundException(
+                    "Seat not found");
+        }
+        // check if any seat is already booked
+        for (ShowSeat seat : seats) {
 
-                        if (seat.getStatus() != SeatStatus.AVAILABLE) {
+            if (seat.getStatus() != SeatStatus.AVAILABLE) {
 
-                                throw new SeatAlreadyBookedException(
-                                                "Seat "
-                                                                + seat.getSeatNumber()
-                                                                + " already booked");
-                        }
-
-                }
-                // create booking and booking seats
-                LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(holdDurationMinutes);
-                Booking booking = Booking.builder()
-                                .userId(request.getUserId())
-                                .showtimeId(request.getShowtimeId())
-                                .expiredAt(expiredAt)
-                                .status(BookingStatus.RESERVED)
-                                .build();
-
-                bookingRepository.save(booking);
-
-                // update seat status to reserved and save booking seats
-                List<BookingSeat> bookingSeats = seats.stream()
-                                .map(seat -> {
-                                        seat.setStatus(SeatStatus.RESERVED);
-                                        seat.setReservedBy(request.getUserId());
-                                        seat.setReservedUntil(expiredAt);
-                                        return BookingSeat.builder()
-                                                        .bookingId(booking.getId())
-                                                        .showSeatId(seat.getId())
-                                                        .build();
-                                }).toList();
-                showSeatRepository.saveAll(seats);
-                bookingSeatRepository.saveAll(bookingSeats);
-
-                // create outbox event for seat reserved
-                SeatReservedEvent event = SeatReservedEvent.builder()
-                                .bookingId(booking.getId())
-                                .userId(request.getUserId())
-                                .showtimeId(request.getShowtimeId())
-                                .seatNumbers(request.getSeatNumbers())
-                                .createdAt(LocalDateTime.now())
-                                .build();
-
-                eventPublisher.publish(
-                                AggregateType.BOOKING,
-                                booking.getId(),
-                                OutboxEventType.SEAT_RESERVED,
-                                event);
-
-                return ReserveSeatResponse.builder()
-                                .bookingId(booking.getId())
-                                .status(booking.getStatus())
-                                .message("Reserved")
-                                .build();
+                throw new SeatAlreadyBookedException(
+                        "Seat "
+                                + seat.getSeatNumber()
+                                + " already booked");
+            }
 
         }
+        // create booking and booking seats
+        LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(holdDurationMinutes);
+        Booking booking = Booking.builder()
+                .userId(request.getUserId())
+                .showtimeId(request.getShowtimeId())
+                .expiredAt(expiredAt)
+                .status(BookingStatus.RESERVED)
+                .build();
 
-        public String toJson(Object object) {
-                try {
-                        return objectMapper.writeValueAsString(object);
-                } catch (JsonProcessingException e) {
-                        throw new IllegalStateException("Cannot convert object to JSON", e);
-                }
+        bookingRepository.save(booking);
+
+        // update seat status to reserved and save booking seats
+        List<BookingSeat> bookingSeats = seats.stream()
+                .map(seat -> {
+                    seat.setStatus(SeatStatus.RESERVED);
+                    seat.setReservedBy(request.getUserId());
+                    seat.setReservedUntil(expiredAt);
+                    return BookingSeat.builder()
+                            .bookingId(booking.getId())
+                            .showSeatId(seat.getId())
+                            .build();
+                }).toList();
+        showSeatRepository.saveAll(seats);
+        bookingSeatRepository.saveAll(bookingSeats);
+
+        // create outbox event for seat reserved
+        SeatReservedEvent event = SeatReservedEvent.builder()
+                .bookingId(booking.getId())
+                .userId(request.getUserId())
+                .showtimeId(request.getShowtimeId())
+                .seatNumbers(request.getSeatNumbers())
+                .eventId(EventMetadataFactory.nextEventId())
+                .occurredAt(EventMetadataFactory.now())
+                .build();
+
+        eventPublisher.publish(
+                AggregateType.BOOKING,
+                booking.getId(),
+                OutboxEventType.SEAT_RESERVED,
+                event);
+
+        return ReserveSeatResponse.builder()
+                .bookingId(booking.getId())
+                .status(booking.getStatus())
+                .message("Reserved")
+                .build();
+
+    }
+
+    public String toJson(Object object) {
+        try {
+            return objectMapper.writeValueAsString(object);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Cannot convert object to JSON", e);
         }
+    }
 
 }

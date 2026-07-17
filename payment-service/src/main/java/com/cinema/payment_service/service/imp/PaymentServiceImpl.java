@@ -1,7 +1,7 @@
 package com.cinema.payment_service.service.imp;
 
 import java.time.LocalDateTime;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.cinema.common.outbox.enums.AggregateType;
 import com.cinema.common.outbox.enums.OutboxEventType;
 import com.cinema.common.outbox.publisher.EventPublisher;
+import com.cinema.event.EventMetadataFactory;
 import com.cinema.event.PaymentFailedEvent;
 import com.cinema.event.PaymentSuccessEvent;
 import com.cinema.event.SeatReservedEvent;
@@ -27,95 +28,97 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
-        private final PaymentRepository paymentRepository;
+    private final PaymentRepository paymentRepository;
 
-        private final EventPublisher eventPublisher;
+    private final EventPublisher eventPublisher;
 
-        private final PaymentGateway paymentGateway;
+    private final PaymentGateway paymentGateway;
 
-        @Override
-        @Transactional
-        public void process(SeatReservedEvent event) {
+    @Override
+    @Transactional
+    public void process(SeatReservedEvent event) {
 
-                Payment payment = Payment.builder()
-                                .bookingId(event.bookingId())
-                                .userId(event.userId())
-                                .status(PaymentStatus.PENDING)
-                                .build();
+        Payment payment = Payment.builder()
+                .bookingId(event.bookingId())
+                .userId(event.userId())
+                .status(PaymentStatus.PENDING)
+                .build();
 
-                paymentRepository.save(payment);
+        paymentRepository.save(payment);
 
-                try {
+        try {
 
-                        PaymentGatewayResult result = paymentGateway.pay(payment);
+            PaymentGatewayResult result = paymentGateway.pay(payment);
 
-                        if (result.success()) {
+            if (result.success()) {
 
-                                payment.setStatus(PaymentStatus.SUCCESS);
+                payment.setStatus(PaymentStatus.SUCCESS);
 
-                                payment.setTransactionId(result.transactionId());
+                payment.setTransactionId(result.transactionId());
 
-                                PaymentSuccessEvent paymentSuccessEvent = PaymentSuccessEvent.builder()
-                                                .paymentId(payment.getId())
-                                                .bookingId(payment.getBookingId())
-                                                .userId(payment.getUserId())
-                                                .transactionId(result.transactionId())
-                                                .paidAt(LocalDateTime.now())
-                                                .build();
+                PaymentSuccessEvent paymentSuccessEvent = PaymentSuccessEvent.builder()
+                        .paymentId(payment.getId())
+                        .bookingId(payment.getBookingId())
+                        .userId(payment.getUserId())
+                        .transactionId(result.transactionId())
+                        .paidAt(LocalDateTime.now())
+                        .eventId(EventMetadataFactory.nextEventId())
+                        .occurredAt(EventMetadataFactory.now())
+                        .build();
 
-                                eventPublisher.publish(
-                                                AggregateType.PAYMENT,
-                                                payment.getId(),
-                                                OutboxEventType.PAYMENT_SUCCESS,
-                                                paymentSuccessEvent);
+                eventPublisher.publish(
+                        AggregateType.PAYMENT,
+                        payment.getId(),
+                        OutboxEventType.PAYMENT_SUCCESS,
+                        paymentSuccessEvent);
 
-                                log.info("Payment {} success", payment.getId());
+                log.info("Payment {} success", payment.getId());
 
-                        } else {
+            } else {
 
-                                payment.setStatus(PaymentStatus.FAILED);
+                payment.setStatus(PaymentStatus.FAILED);
 
-                                payment.setFailureReason(result.message());
+                payment.setFailureReason(result.message());
 
-                                PaymentFailedEvent paymentFailedEvent = PaymentFailedEvent.builder()
-                                                .paymentId(payment.getId())
-                                                .bookingId(payment.getBookingId())
-                                                .userId(payment.getUserId())
-                                                .reason(result.message())
-                                                .failedAt(LocalDateTime.now())
-                                                .build();
+                PaymentFailedEvent paymentFailedEvent = PaymentFailedEvent.builder()
+                        .paymentId(payment.getId())
+                        .bookingId(payment.getBookingId())
+                        .userId(payment.getUserId())
+                        .reason(result.message())
+                        .failedAt(LocalDateTime.now())
+                        .build();
 
-                                eventPublisher.publish(
-                                                AggregateType.PAYMENT,
-                                                payment.getId(),
-                                                OutboxEventType.PAYMENT_FAILED,
-                                                paymentFailedEvent);
+                eventPublisher.publish(
+                        AggregateType.PAYMENT,
+                        payment.getId(),
+                        OutboxEventType.PAYMENT_FAILED,
+                        paymentFailedEvent);
 
-                                log.info("Payment {} failed", payment.getId());
+                log.info("Payment {} failed", payment.getId());
 
-                        }
+            }
 
-                } catch (Exception ex) {
+        } catch (Exception ex) {
 
-                        payment.setFailureReason(ex.getMessage());
+            payment.setFailureReason(ex.getMessage());
 
-                        PaymentFailedEvent paymentFailedEvent = PaymentFailedEvent.builder()
-                                        .paymentId(payment.getId())
-                                        .bookingId(payment.getBookingId())
-                                        .userId(payment.getUserId())
-                                        .reason(ex.getMessage())
-                                        .failedAt(LocalDateTime.now())
-                                        .build();
+            PaymentFailedEvent paymentFailedEvent = PaymentFailedEvent.builder()
+                    .paymentId(payment.getId())
+                    .bookingId(payment.getBookingId())
+                    .userId(payment.getUserId())
+                    .reason(ex.getMessage())
+                    .failedAt(LocalDateTime.now())
+                    .build();
 
-                        eventPublisher.publish(
-                                        AggregateType.PAYMENT,
-                                        payment.getId(),
-                                        OutboxEventType.PAYMENT_FAILED,
-                                        paymentFailedEvent);
+            eventPublisher.publish(
+                    AggregateType.PAYMENT,
+                    payment.getId(),
+                    OutboxEventType.PAYMENT_FAILED,
+                    paymentFailedEvent);
 
-                        log.error("Payment exception", ex);
-                }
-
+            log.error("Payment exception", ex);
         }
+
+    }
 
 }
