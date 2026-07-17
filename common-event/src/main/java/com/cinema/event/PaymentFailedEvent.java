@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import lombok.Builder;
 
 @Builder
-public record PaymentSuccessEvent(
+public record PaymentFailedEvent(
 
         Long paymentId,
 
@@ -13,9 +13,7 @@ public record PaymentSuccessEvent(
 
         Long userId,
 
-        String transactionId,
+        String reason,
 
-        LocalDateTime paidAt
-
-) {
+        LocalDateTime failedAt) {
 }

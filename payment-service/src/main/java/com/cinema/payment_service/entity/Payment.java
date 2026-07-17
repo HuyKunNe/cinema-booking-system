@@ -37,4 +37,10 @@ public class Payment extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
+
+    @Column(length = 100)
+    private String transactionId;
+
+    @Column(length = 255)
+    private String failureReason;
 }

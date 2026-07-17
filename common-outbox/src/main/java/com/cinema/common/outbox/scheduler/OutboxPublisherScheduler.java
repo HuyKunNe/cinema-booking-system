@@ -53,10 +53,6 @@ public class OutboxPublisherScheduler {
                                                 topic,
                                                 event.getAggregateId(),
                                                 payload);
-                                kafkaPublisher.publish(
-                                                topic,
-                                                event.getAggregateId(),
-                                                payload);
 
                                 event.setStatus(
                                                 OutboxStatus.SENT);

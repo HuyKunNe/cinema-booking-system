@@ -10,5 +10,9 @@ CREATE TABLE payments
 
     created_at DATETIME,
 
-    updated_at DATETIME
+    updated_at DATETIME,
+
+    failure_reason VARCHAR(255),
+
+    transaction_id VARCHAR(100)
 );

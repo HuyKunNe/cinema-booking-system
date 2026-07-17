@@ -1,6 +1,8 @@
 package com.cinema.common.outbox.enums;
 
+import com.cinema.event.PaymentFailedEvent;
 import com.cinema.event.PaymentSuccessEvent;
+import com.cinema.event.SeatReleasedEvent;
 import com.cinema.event.SeatReservedEvent;
 
 import lombok.Getter;
@@ -14,15 +16,15 @@ public enum OutboxEventType {
 
   PAYMENT_SUCCESS(
       "payment-success",
-      PaymentSuccessEvent.class);
+      PaymentSuccessEvent.class),
 
-  // PAYMENT_FAILED(
-  // "payment-failed",
-  // pPaymentFailedEvent.class),
+  PAYMENT_FAILED(
+      "payment-failed",
+      PaymentFailedEvent.class),
 
-  // SEAT_RELEASED(
-  // "seat-released",
-  // SeatReleasedEvent.class);
+  SEAT_RELEASED(
+      "seat-released",
+      SeatReleasedEvent.class);
 
   private final String topic;
 

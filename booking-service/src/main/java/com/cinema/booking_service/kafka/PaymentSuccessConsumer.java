@@ -1,20 +1,23 @@
 package com.cinema.booking_service.kafka;
 
-import com.cinema.booking_service.service.BookingService;
-import com.cinema.event.PaymentSuccessEvent;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+
+import com.cinema.booking_service.service.BookingService;
+import com.cinema.common.kafka.constants.KafkaTopics;
+import com.cinema.event.PaymentSuccessEvent;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class PaymentConsumer {
+public class PaymentSuccessConsumer {
 
     private final BookingService bookingService;
 
-    @KafkaListener(topics = "payment-success", groupId = "booking-group")
+    @KafkaListener(topics = KafkaTopics.PAYMENT_SUCCESS, groupId = "booking-group")
     public void consume(PaymentSuccessEvent event) {
 
         log.info("========== PAYMENT SUCCESS CONSUMER ==========");

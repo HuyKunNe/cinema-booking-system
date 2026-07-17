@@ -4,7 +4,6 @@ import com.cinema.event.SeatReservedEvent;
 
 public interface PaymentService {
 
-    void process(
-            SeatReservedEvent event);
+    void process(SeatReservedEvent event);
 
 }
