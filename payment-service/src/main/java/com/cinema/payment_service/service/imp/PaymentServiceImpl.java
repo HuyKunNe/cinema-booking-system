@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.cinema.common.outbox.enums.AggregateType;
 import com.cinema.common.outbox.enums.OutboxEventType;
 import com.cinema.common.outbox.publisher.EventPublisher;
+import com.cinema.common.outbox.service.IdempotencyService;
 import com.cinema.event.EventMetadataFactory;
 import com.cinema.event.PaymentFailedEvent;
 import com.cinema.event.PaymentSuccessEvent;
@@ -34,10 +35,20 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentGateway paymentGateway;
 
+    private final IdempotencyService idempotencyService;
+
     @Override
     @Transactional
     public void process(SeatReservedEvent event) {
+        if (idempotencyService.alreadyProcessed(
+                event.eventId(),
+                "payment-seat-reserved")) {
 
+            log.info("Duplicate {}", event.eventId());
+
+            return;
+
+        }
         Payment payment = Payment.builder()
                 .bookingId(event.bookingId())
                 .userId(event.userId())

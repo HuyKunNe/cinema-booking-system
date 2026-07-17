@@ -1,7 +1,9 @@
 com\cinema\common\outbox\topic\DefaultKafkaTopicResolver.class
 com\cinema\common\outbox\entity\OutboxEvent.class
+com\cinema\common\outbox\entity\ProcessedEvent.class
 com\cinema\common\outbox\entity\OutboxEvent$OutboxEventBuilder.class
 com\cinema\common\outbox\enums\AggregateType.class
+com\cinema\common\outbox\enums\OutboxEventType.class
 com\cinema\common\outbox\config\OutboxAutoConfiguration.class
 com\cinema\common\outbox\enums\OutboxStatus.class
 com\cinema\common\outbox\publisher\EventPublisher.class
@@ -9,9 +11,13 @@ com\cinema\common\outbox\service\OutboxService.class
 com\cinema\common\outbox\publisher\EventPublisherImpl.class
 com\cinema\common\outbox\repository\OutboxRepository.class
 com\cinema\common\outbox\exception\OutboxException.class
+com\cinema\common\outbox\entity\ProcessedEvent$ProcessedEventBuilder.class
+com\cinema\common\outbox\repository\ProcessedEventRepository.class
 com\cinema\common\outbox\topic\KafkaTopicResolver.class
 com\cinema\common\outbox\annotation\EnableOutbox.class
+com\cinema\common\outbox\service\IdempotencyService.class
 com\cinema\common\outbox\service\OutboxServiceImpl.class
 com\cinema\common\outbox\publisher\KafkaEventPublisher.class
 com\cinema\common\outbox\scheduler\OutboxPublisherScheduler.class
 com\cinema\common\outbox\serializer\EventSerializer.class
+com\cinema\common\outbox\service\IdempotencyServiceImpl.class

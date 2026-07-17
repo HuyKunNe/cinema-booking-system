@@ -1,4 +1,13 @@
 com\cinema\event\PaymentSuccessEvent.class
-com\cinema\event\SeatReservedEvent$SeatReservedEventBuilder.class
+com\cinema\event\BookingExpiredEvent$BookingExpiredEventBuilder.class
+com\cinema\event\EventMetadataFactory.class
 com\cinema\event\SeatReservedEvent.class
+com\cinema\event\BookingCancelledEvent$BookingCancelledEventBuilder.class
+com\cinema\event\BookingExpiredEvent.class
+com\cinema\event\SeatReleasedEvent.class
+com\cinema\event\PaymentSuccessEvent$PaymentSuccessEventBuilder.class
+com\cinema\event\SeatReservedEvent$SeatReservedEventBuilder.class
+com\cinema\event\PaymentFailedEvent.class
+com\cinema\event\PaymentFailedEvent$PaymentFailedEventBuilder.class
+com\cinema\event\SeatReleasedEvent$SeatReleasedEventBuilder.class
 com\cinema\event\BookingCancelledEvent.class

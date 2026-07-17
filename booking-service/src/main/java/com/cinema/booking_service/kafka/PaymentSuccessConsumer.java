@@ -5,41 +5,41 @@ import org.springframework.stereotype.Component;
 
 import com.cinema.booking_service.service.BookingService;
 import com.cinema.common.kafka.constants.KafkaTopics;
+import com.cinema.common.outbox.service.IdempotencyService;
 import com.cinema.event.PaymentSuccessEvent;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentSuccessConsumer {
+
+    private static final String CONSUMER = "booking-payment-success";
 
     private final BookingService bookingService;
 
+    private final IdempotencyService idempotencyService;
+
     @KafkaListener(topics = KafkaTopics.PAYMENT_SUCCESS, groupId = "booking-group")
-    public void consume(PaymentSuccessEvent event) {
+    public void consume(
+            PaymentSuccessEvent event) {
 
-        log.info("========== PAYMENT SUCCESS CONSUMER ==========");
-        log.info("Receive PaymentSuccessEvent: {}", event);
+        if (idempotencyService.alreadyProcessed(
+                event.eventId(),
+                "booking-payment-success")) {
 
-        try {
+            return;
 
-            bookingService.confirmBooking(event);
-
-            log.info("Booking confirmed. bookingId={}", event.bookingId());
-
-        } catch (Exception ex) {
-
-            log.error("Failed to confirm booking. bookingId={}",
-                    event.bookingId(),
-                    ex);
-
-            // throw để Kafka retry
-            throw ex;
         }
 
-        log.info("==============================================");
+        bookingService.confirmBooking(event);
+
+        idempotencyService.markProcessed(
+                event.eventId(),
+                CONSUMER);
+
     }
 
 }
